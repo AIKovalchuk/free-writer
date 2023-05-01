@@ -21,6 +21,10 @@ class OpenAI {
       const response = await this.openai.createChatCompletion({ model: 'gpt-3.5-turbo', messages })
       return response.data.choices[0].message
     } catch (error) {
+      if (error.response) {
+        console.log(error.response.status);
+        console.log(error.response.data);
+      }
       console.log("Error while chat", error.message)
       throw new Error("Error while chat" + error.message)
 

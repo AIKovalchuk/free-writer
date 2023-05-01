@@ -14,13 +14,13 @@ const INITIAL_SESSION = {
 bot.use(session());
 
 bot.command("new", async (context) => {
-  context.session = INITIAL_SESSION;
+  context.session = { messages: [] };
   await context.reply("Жду вашего сообщения!");
 });
 
 bot.on(message("voice"), async (context) => {
   if (!context.session) {
-    context.session = INITIAL_SESSION;
+    context.session = { messages: [] };
   }
 
   try {
@@ -33,7 +33,6 @@ bot.on(message("voice"), async (context) => {
     const mp3Path = await ogg.toMp3(oggPath, userId);
 
     const text = await openai.transcription(mp3Path);
-    // const text = ""
     await context.reply(code(`Ваш запрос: ${text}`));
 
     context.session.messages.push({
@@ -48,6 +47,37 @@ bot.on(message("voice"), async (context) => {
     });
 
     await context.reply(response.content);
+  } catch (error) {
+    console.log("Error while message", error.message);
+  }
+});
+
+bot.on(message("text"), async (context) => {
+  console.log("Request from:", context.message.from.id)
+  if (!context.session) {
+    context.session = INITIAL_SESSION;
+  }
+  console.log("Context size:", context.session.messages.reduce((prev, cur) => prev + cur.content.length, 0))
+
+  try {
+    const text = context.message.text
+
+    await context.reply(code(`Ваш запрос: ${text}`));
+
+    context.session.messages.push({
+      role: openai.roles.USER,
+      content: text,
+    });
+    const response = await openai.chat(context.session.messages);
+
+    context.session.messages.push({
+      role: openai.roles.ASSISTANT,
+      content: response.content,
+    });
+
+    await context.reply(response.content);
+
+    console.log("Response for:", context.message.from.id)
   } catch (error) {
     console.log("Error while message", error.message);
   }
